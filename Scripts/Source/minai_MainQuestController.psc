@@ -226,7 +226,6 @@ Function DebugVerbose(String str)
 EndFunction
 
 
-
 ; Inform the LLM that something has happened, without requesting the LLM to respond immediately.
 ; int handle = ModEvent.Create("MinAI_RegisterEvent")
 ;  if (handle)
@@ -238,6 +237,8 @@ Event OnRegisterEvent(string eventLine, string eventType)
   Info("OnRegisterEvent(" + eventType + "): " + eventLine)
   RegisterEvent(eventLine, eventType)
 EndEvent
+
+
 ; Inform the LLM that something has happened, and request a specific actor to respond.
 ; Use "everyone" for targetName if you don't want a specific response.
 ; int handle = ModEvent.Create("MinAI_RequestResponse")
@@ -251,6 +252,9 @@ Event OnRequestResponse(string eventLine, string eventType, string targetName)
   Info("OnRequestResponse(" + eventType + " => " + targetName + "): " + eventLine)
   RequestLLMResponse(eventLine, eventType, targetName)
 EndEvent
+
+
+
 ; Inform the LLM that an actor has spoken, and request a specific actor to respond.
 ; Use "everyone" for targetName if you don't want a specific response.
 ; int handle = ModEvent.Create("MinAI_RequestResponseDialogue")
@@ -264,3 +268,5 @@ Event OnRequestResponseDialogue(string speakerName, string eventLine, string tar
   Info("OnRequestResponse(" + speakerName + " => " + targetName + "): " + eventLine)
   RequestLLMResponseNPC(speakerName, eventLine, targetName)
 EndEvent
+
+
