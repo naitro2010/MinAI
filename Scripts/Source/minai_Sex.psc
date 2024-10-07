@@ -596,6 +596,7 @@ Event CommandDispatcher(String speakerName,String  command, String parameter)
     else
       actors = slf.SortActors(actors)
     EndIf
+    Main.DebugVerbose("Starting group sex: " + actors)
     StartSexOrSwitchToGroup(actors, akSpeaker, "")
   elseif (command=="ExtCmdRemoveClothes")
     Form[] equippedItems=PO3_SKSEFunctions.AddAllEquippedItemsToArray(akSpeaker);
@@ -696,88 +697,157 @@ EndEvent
 
 
 
+Event OnContinueExcitementUpdates(string eventName, string strArg, float numArg, Form sender)
+  int ostimTid = numArg as int
+  if OThread.IsRunning(ostimTid)
+    Actor[] actors = OThread.GetActors(ostimTid)
+    string report = ""
+    int i = 0
+    if actors && actors.Length > 0
+      while i < actors.Length
+        Actor currentActor = actors[i]
+        if currentActor
+          string actorName = Main.GetActorName(currentActor)
+          int excitement = OActor.GetExcitement(currentActor) as int
+          int orgasmCount = OActor.GetTimesClimaxed(currentActor)
+          report += actorName + " is " + excitement + "% excited and has climaxed " + orgasmCount + " times.\n"
+        EndIf
+        i += 1
+      EndWhile
+      
+      if report != ""
+        Main.RegisterEvent("Scene Update: " + report)
+      EndIf
+      
+      Utility.Wait(2.2)
+      SendModEvent("ContinueExcitementUpdates", "", ostimTid as float)
+    else
+      Main.Debug("No actors found for OStim thread: " + ostimTid)
+    EndIf
+  else
+    Main.Info("OStim scene " + ostimTid + " is no longer running. Unregistering for updates.")
+    UnregisterForModEvent("ContinueExcitementUpdates")
+  EndIf
+EndEvent
+
+
+
 Event OStimManager(string eventName, string strArg, float numArg, Form sender)
   int ostimTid = numArg as int
-  Main.Info("oStim eventName: "+eventName+", strArg: "+strArg);
+  Main.Info("oStim eventName: "+eventName+", strArg: "+strArg)
   if (eventName=="ostim_thread_start")
-    string sceneName=OThread.GetScene(ostimTid);
-    bool isRunning=OThread.IsRunning(ostimTid);
-    Actor[] actors =  OThread.GetActors(ostimTid);
-    string actorString;
-    int i = actors.Length
-    bool playerInvolved=false
-    while(i > 0)
-        i -= 1
-        actorString=actorString+Main.GetActorName(actors[i])+",";
-        if (actors[i] == playerRef) 
-          playerInvolved=true;
-        EndIf
-    Endwhile
+    string sceneName = OThread.GetScene(ostimTid)
+    bool isRunning = OThread.IsRunning(ostimTid)
+    Actor[] actors =  OThread.GetActors(ostimTid)
+    string metaData = OThread.GetMetadata(ostimTid)
+    string[] actorNames = new string[actors.Length]
+    bool playerInvolved = false
     
-    if (playerInvolved)
-      AIFF.ChillOut()
+    if isRunning
+      int i = 0
+      if actors && actors.Length > 0
+        while i < actors.Length
+          actorNames[i] = Main.GetActorName(actors[i])
+          if actors[i] == playerRef
+              playerInvolved = true
+          EndIf
+          i += 1
+        EndWhile
+        string actorString = StringUtil.Join(actorNames, ",")
+        Main.Debug("Registering for OStim ContinueExcitementUpdates event")
+        RegisterForModEvent("ContinueExcitementUpdates", "OnContinueExcitementUpdates")
+        SendModEvent("ContinueExcitementUpdates", "", ostimTid as float)
+        
+        if playerInvolved
+          AIFF.ChillOut()
+        EndIf
+        SetSexSceneState("on")
+        if bHasAIFF
+          AIAgentFunctions.logMessage("ostim@"+sceneName+" "+isRunning+" "+actorString,"setconf")
+          Main.RegisterEvent("This sex scene begins with " + metaData)
+        EndIf
+        Main.Debug("Started intimate scene")
+      else
+        Main.Debug("No actors found in OStim scene: " + sceneName)
+        return
+      EndIf
+    else
+      Main.Debug("OStim scene " + ostimTid + " is not running. Not starting excitement updates.")
     EndIf
-    SetSexSceneState("on")
-    if bHasAIFF
-      AIAgentFunctions.logMessage("ostim@"+sceneName+" "+isRunning+" "+actorString,"setconf")
-    EndIf
-    Main.Info("Started intimate scene")
   
   elseif (eventName=="ostim_thread_scenechanged")
     string sceneId = strArg 
-    string sceneName=OThread.GetScene(ostimTid);
-    bool isRunning=OThread.IsRunning(ostimTid);
-    Actor[] actors =  OThread.GetActors(ostimTid);
-    string actorString;
-    int i = actors.Length
-    bool playerInvolved=false
-    while(i > 0)
-      i -= 1
-      actorString=actorString+Main.GetActorName(actors[i])+",";
-      if (actors[i] == playerRef)
-        playerInvolved=true;
-      EndIf
-      string actorName = main.GetActorName(actors[i])
-      int excitement = OActor.GetExcitement(actors[i]) as int
-      int orgasmcount = OActor.GetTimesClimaxed(actors[i])
-      Main.RegisterEvent(actorName + " is " + excitement + "% of the way toward their next orgasm and has already climaxed " + orgasmcount + " times during this encounter.")
-    Endwhile
+    string sceneName = OThread.GetScene(ostimTid);
+    bool isRunning = OThread.IsRunning(ostimTid);
+    Actor[] actors = OThread.GetActors(ostimTid);
+    string metaData = OThread.GetMetadata(ostimTid)
+    string[] actorNames = new string[actors.Length]
+    bool playerInvolved = false
     
-    if (playerInvolved)
-      AIFF.ChillOut()
+    int i = 0
+    if actors && actors.Length > 0
+      while i < actors.Length
+        actorNames[i] = Main.GetActorName(actors[i])
+        if actors[i] == playerRef
+          playerInvolved = true
+        EndIf
+        i += 1
+      EndWhile
+      string actorString = StringUtil.Join(actorNames, ",")
+
+      if playerInvolved
+        AIFF.ChillOut()
+      EndIf
+      Main.Debug("OStim scene change: " + sceneName + " id: " + sceneId + " isRunning:" + isRunning + " Actors:" + actorString, "info_sexscene")
+      Main.RegisterEvent("Sex position has changed to " + metaData)
+    else
+      Main.Debug("No actors found in OStim scene: " + sceneName)
+      return
     EndIf
-    main.RegisterEvent(""+sceneName+" id:"+sceneId+" isRunning:"+isRunning+" Actors:"+actorString,"info_sexscene")
-    Main.Info("Ostim Scene changed")
 
   elseif (eventName=="ostim_actor_orgasm")    
     Actor OrgasmedActor = Sender as Actor
-    string sceneName=OThread.GetScene(ostimTid);
-    bool isRunning=OThread.IsRunning(ostimTid);
+    string sceneName = OThread.GetScene(ostimTid);
+    ;bool isRunning = OThread.IsRunning(ostimTid);
     Actor[] actors =  OThread.GetActors(ostimTid);
-    main.RegisterEvent(Main.GetActorName(OrgasmedActor) + " had an Orgasm")
-    DirtyTalk(actors, "ohh... yes.")
-    Main.Info("Ostim Actor orgasm")
+    if OrgasmedActor
+      Main.RegisterEvent(Main.GetActorName(OrgasmedActor) + " had an Orgasm")
+      DirtyTalk(actors, "ohh... yes.")
+    else
+      Main.Debug("Orgasmed actor is null in scene: " + sceneName)
+    EndIf
 
   elseif (eventName=="ostim_thread_end")    
     string sceneName=OThread.GetScene(ostimTid);
-    bool isRunning=OThread.IsRunning(ostimTid);
+    ;bool isRunning=OThread.IsRunning(ostimTid);
     Actor[] actors =  OThread.GetActors(ostimTid);
-    string actorString;
-    int i = actors.Length
-    bool playerInvolved=false
-    while(i > 0)
-      i -= 1
-      actorString=actorString+Main.GetActorName(actors[i])+",";
-      if (actors[i] == playerRef) 
-        playerInvolved=true;
-      EndIf
-    endwhile
+    string[] actorNames = new string[actors.Length]
+    bool playerInvolved = false
     
-    if (playerInvolved)
-      AIFF.ChillOut()
+    int i = 0
+    if actors && actors.Length > 0
+      while i < actors.Length
+        actorNames[i] = Main.GetActorName(actors[i])
+        if actors[i] == playerRef
+          playerInvolved = true
+        EndIf
+        i += 1
+      EndWhile
+      string actorString = StringUtil.Join(actorNames, ",")
+      Main.Debug("Unregistering from OStim ContinueExcitementUpdates event")
+      UnregisterForModEvent("ContinueExcitementUpdates")
+
+      if playerInvolved
+        AIFF.ChillOut()
+      EndIf
+      SetSexSceneState("off")
+      Main.Debug("Ended intimate scene: " + actorString)
+    else
+      Main.Debug("No actors found in OStim scene: " + sceneName)
+      return
     EndIf
-    SetSexSceneState("off")
-    Main.Info("Ended intimate scene")
+  else
+    Main.Debug("Unhandled OStim event: " + eventName)
   EndIf
 EndEvent
 
