@@ -99,6 +99,8 @@ function Maintenance(minai_MainQuestController _main)
   RegisterForModEvent("DDI_KeyBreak", "OnKeyBreak")
   RegisterForModEvent("DDI_JamLock", "OnJamLock")
   RegisterForModEvent("DDI_DeviceEscapeAttempt", "OnDeviceEscapeAttempt")
+  RegisterForModEvent("UDEvent_VibDeviceEffectUpdate","OnUDVibDeviceEffectUpdate");
+  RegisterForModEvent("UDEvent_VibDeviceEffectEnd","OnUDVibDeviceEffectEnd");
   
   libs = Game.GetFormFromFile(0x00F624, "Devious Devices - Integration.esm") as zadlibs
     if libs
@@ -376,7 +378,58 @@ Event OnVibrateStop(string eventName, string actorName, float vibStrength, Form 
   string strength = getVibStrength(vibStrength)
   Main.RegisterEvent(actorName + " stopped being stimulated by a vibrator.")
 EndEvent
-
+Event OnUDVibDeviceEffectEnd(String asSource, Form akFActor, Form akFID, Form akFRD, Int aiEroZones, Int aiBaseStrength)
+    ;Actor on which was vibrator turned off
+    Actor akActor   = akFActor as Actor
+    
+    ;Inventory device of locked device
+    Armor akID      = akFID as Armor
+    
+    ;Render device of locked device
+    Armor akRD      = akFRD as Armor
+    Int aiCurrentStrength=0
+    if akActor==Game.getPlayer()
+      If Math.LogicalAnd(aiEroZones,0x3) != 0
+          Main.RegisterEvent("vib_vaginal@"+aiCurrentStrength,"udng_vibrate")
+      Endif
+      If Math.LogicalAnd(aiEroZones,0x4) != 0
+          Main.RegisterEvent("vib_clit@"+aiCurrentStrength,"udng_vibrate")
+      Endif
+      If Math.LogicalAnd(aiEroZones,0x40) != 0
+          Main.RegisterEvent("vib_nipple@"+aiCurrentStrength,"udng_vibrate")
+      Endif
+      If Math.LogicalAnd(aiEroZones,0x180) != 0
+          Main.RegisterEvent("vib_anal@"+aiCurrentStrength,"udng_vibrate")
+      Endif
+    Endif    
+EndEvent
+Event OnUDVibDeviceEffectUpdate(String asSource, Form akFActor, Form akFID, Form akFRD, Int aiEroZones, Int aiBaseStrength, Int aiCurrentStrength, Bool abIsPaused)
+      ;Actor on which was vibrator updated
+      Actor akActor   = akFActor as Actor
+      
+      ;Inventory device of locked device
+      Armor akID      = akFID as Armor
+      
+      ;Render device of locked device
+      Armor akRD      = akFRD as Armor
+      if abIsPaused==true
+          aiCurrentStrength=0
+      Endif
+      if akActor==Game.getPlayer()
+        If Math.LogicalAnd(aiEroZones,0x3) != 0
+            Main.RegisterEvent("vib_vaginal@"+aiCurrentStrength,"udng_vibrate")
+        Endif
+        If Math.LogicalAnd(aiEroZones,0x4) != 0
+            Main.RegisterEvent("vib_clit@"+aiCurrentStrength,"udng_vibrate")
+        Endif
+        If Math.LogicalAnd(aiEroZones,0x40) != 0
+            Main.RegisterEvent("vib_nipple@"+aiCurrentStrength,"udng_vibrate")
+        Endif
+        If Math.LogicalAnd(aiEroZones,0x180) != 0
+            Main.RegisterEvent("vib_anal@"+aiCurrentStrength,"udng_vibrate")
+        Endif
+      Endif
+EndEvent
 
 bool Function CanVibrate(Actor akActor)
   if (!bHasDD)

@@ -6,7 +6,12 @@ require_once("util.php");
 require_once(__DIR__.DIRECTORY_SEPARATOR."updateThreadsDB.php");
 
 
-
+function xtoys($toy,$intensity) {
+    if (isset($GLOBALS["XTOYS_WEBHOOK"]) && !empty($GLOBALS["XTOYS_WEBHOOK"])) {
+        $url = "https://webhook.xtoys.app/".$GLOBALS["XTOYS_WEBHOOK"]."?action=".$toy."&time=600&intensity=".$intensity;
+        file_get_contents($url);
+    }
+}
 
 function ProcessIntegrations() {
     if (isset($GLOBALS["gameRequest"])) {
@@ -14,6 +19,15 @@ function ProcessIntegrations() {
     }
     // Handle allowing third party mods to register things with the context system
     $MUST_DIE=false;
+    if (isset($GLOBALS["XTOYS_WEBHOOK"]) && !empty($GLOBALS["XTOYS_WEBHOOK"])) {
+        if (isset($GLOBALS["gameRequest"])) {
+            if ($GLOBALS["gameRequest"][0]=="udng_vibrate") {
+                $vars=explode("@",$GLOBALS["gameRequest"][3]);
+                xtoys($vars[0],intval($vars[1]));
+                $MUST_DIE=true;
+            }
+        }
+    }
     if (isset($GLOBALS["use_defeat"]) && $GLOBALS["use_defeat"] && IsModEnabled("SexlabDefeat")) {
         $GLOBALS["events_to_ignore"][] = "combatend";
         $GLOBALS["events_to_ignore"][] = "combatendmighty";
